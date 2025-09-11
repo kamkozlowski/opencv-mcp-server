@@ -24,8 +24,7 @@ logger = logging.getLogger("opencv-mcp-server")
 
 # Create FastMCP server instance
 mcp = FastMCP(
-    name="opencv-mcp-server",
-    description="MCP server providing OpenCV computer vision capabilities",
+    name="opencv-mcp-server"
 )
 
 def main():
