@@ -10,7 +10,7 @@ import cv2
 import numpy as np
 import os
 import logging
-from typing import Optional, List, Dict, Any, Tuple, Union
+from typing import Optional, List, Dict, Any, Union
 
 # Import utility functions from utils
 from .utils import get_image_info, save_and_display, get_timestamp
@@ -21,7 +21,7 @@ logger = logging.getLogger("opencv-mcp-server.image_processing")
 def apply_filter_tool(
     image_path: str, 
     filter_type: str, 
-    kernel_size: Union[int, Tuple[int, int]], 
+    kernel_size: Union[int, List[int]], 
     sigma: Optional[float] = None,
     sigma_color: Optional[float] = None,
     sigma_space: Optional[float] = None
@@ -46,11 +46,25 @@ def apply_filter_tool(
         if img is None:
             raise ValueError(f"Failed to read image from path: {image_path}")
         
-        # Ensure kernel size is odd
+        # Normalize kernel size input into an OpenCV-compatible (width, height) tuple
         if isinstance(kernel_size, int):
-            if kernel_size % 2 == 0:
-                kernel_size = kernel_size + 1
-            kernel_size = (kernel_size, kernel_size)
+            kx = kernel_size + 1 if kernel_size % 2 == 0 else kernel_size
+            kernel_size = (kx, kx)
+        elif isinstance(kernel_size, list):
+            if len(kernel_size) == 1:
+                kx = int(kernel_size[0])
+                kx = kx + 1 if kx % 2 == 0 else kx
+                kernel_size = (kx, kx)
+            elif len(kernel_size) == 2:
+                kx = int(kernel_size[0])
+                ky = int(kernel_size[1])
+                kx = kx + 1 if kx % 2 == 0 else kx
+                ky = ky + 1 if ky % 2 == 0 else ky
+                kernel_size = (kx, ky)
+            else:
+                raise ValueError("kernel_size list must have 1 or 2 values")
+        else:
+            raise ValueError("kernel_size must be an integer or a list of integers")
         
         # Apply selected filter
         if filter_type.lower() == 'blur':
@@ -459,7 +473,7 @@ def find_shapes_tool(
     max_line_gap: float = 10.0,
     draw: bool = True,
     thickness: int = 2,
-    color: Tuple[int, int, int] = (0, 0, 255)
+    color: List[int] = [0, 0, 255]
 ) -> Dict[str, Any]:
     """
     Find basic shapes in an image
@@ -499,6 +513,10 @@ def find_shapes_tool(
         
         # Apply Gaussian blur to reduce noise
         blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+
+        if len(color) != 3:
+            raise ValueError("color must contain exactly 3 values in BGR format")
+        draw_color = tuple(int(channel) for channel in color)
         
         shape_info = {"shape_type": shape_type}
         shapes_data = []
@@ -540,7 +558,7 @@ def find_shapes_tool(
                     
                     # Draw the circle
                     if draw:
-                        cv2.circle(img_copy, center, radius, color, thickness)
+                        cv2.circle(img_copy, center, radius, draw_color, thickness)
                         # Draw the center point
                         cv2.circle(img_copy, center, 2, (0, 255, 0), 3)
             
@@ -581,7 +599,7 @@ def find_shapes_tool(
                     
                     # Draw the line
                     if draw:
-                        cv2.line(img_copy, (x1, y1), (x2, y2), color, thickness)
+                        cv2.line(img_copy, (x1, y1), (x2, y2), draw_color, thickness)
             
         elif shape_type.lower() == 'lines_p':
             # Probabilistic Hough Transform
@@ -619,7 +637,7 @@ def find_shapes_tool(
                     
                     # Draw the line
                     if draw:
-                        cv2.line(img_copy, (x1, y1), (x2, y2), color, thickness)
+                        cv2.line(img_copy, (x1, y1), (x2, y2), draw_color, thickness)
             
         else:
             raise ValueError(f"Unsupported shape type: {shape_type}")
@@ -646,7 +664,7 @@ def match_template_tool(
     method: str = "ccoeff_normed",
     threshold: float = 0.8,
     draw: bool = True,
-    color: Tuple[int, int, int] = (0, 255, 0),
+    color: List[int] = [0, 255, 0],
     thickness: int = 2
 ) -> Dict[str, Any]:
     """
@@ -676,6 +694,10 @@ def match_template_tool(
         
         # Make a copy for drawing
         img_copy = img.copy()
+
+        if len(color) != 3:
+            raise ValueError("color must contain exactly 3 values in BGR format")
+        draw_color = tuple(int(channel) for channel in color)
         
         # Get template dimensions
         h, w = template.shape[:2]
@@ -735,7 +757,7 @@ def match_template_tool(
         
         # Draw the best match
         if draw:
-            cv2.rectangle(img_copy, pt1, pt2, color, thickness)
+            cv2.rectangle(img_copy, pt1, pt2, draw_color, thickness)
         
         # Process other matches
         if len(locations) > 0 and len(locations[0]) > 0:
@@ -775,7 +797,7 @@ def match_template_tool(
                 
                 # Draw this match
                 if draw:
-                    cv2.rectangle(img_copy, pt1, pt2, color, thickness)
+                    cv2.rectangle(img_copy, pt1, pt2, draw_color, thickness)
                 
                 # Limit to max_matches
                 if len(match_data) >= 10:
