@@ -10,7 +10,7 @@ import cv2
 import numpy as np
 import os
 import logging
-from typing import Optional, List, Dict, Any, Tuple, Union
+from typing import Optional, List, Dict, Any, Union
 
 # Import utility functions from utils
 from .utils import get_image_info, save_and_display, get_timestamp
@@ -23,7 +23,7 @@ def detect_features_tool(
     method: str = "sift", 
     max_features: int = 500,
     draw: bool = True,
-    color: Tuple[int, int, int] = (0, 255, 0)
+    color: List[int] = [0, 255, 0]
 ) -> Dict[str, Any]:
     """
     Detect features in an image
@@ -67,11 +67,14 @@ def detect_features_tool(
         
         # Draw keypoints if requested
         if draw:
+            if len(color) != 3:
+                raise ValueError("color must contain exactly 3 values in BGR format")
+            draw_color = tuple(int(channel) for channel in color)
             img_keypoints = cv2.drawKeypoints(
                 img, 
                 keypoints, 
                 None, 
-                color=color, 
+                color=draw_color, 
                 flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
             )
         else:
@@ -288,10 +291,10 @@ def detect_faces_tool(
     method: str = "haar", 
     scale_factor: float = 1.3,
     min_neighbors: int = 5,
-    min_size: Tuple[int, int] = (30, 30),
+    min_size: List[int] = [30, 30],
     confidence_threshold: float = 0.5,
     draw: bool = True,
-    color: Tuple[int, int, int] = (0, 255, 0),
+    color: List[int] = [0, 255, 0],
     thickness: int = 2
 ) -> Dict[str, Any]:
     """
@@ -319,6 +322,14 @@ def detect_faces_tool(
         
         # Make a copy for drawing
         img_copy = img.copy()
+
+        if len(min_size) != 2:
+            raise ValueError("min_size must contain exactly 2 values: [width, height]")
+        min_face_size = (int(min_size[0]), int(min_size[1]))
+
+        if len(color) != 3:
+            raise ValueError("color must contain exactly 3 values in BGR format")
+        draw_color = tuple(int(channel) for channel in color)
         
         # Get face cascade directory
         cascade_path = cv2.data.haarcascades
@@ -354,7 +365,7 @@ def detect_faces_tool(
                 gray,
                 scaleFactor=scale_factor,
                 minNeighbors=min_neighbors,
-                minSize=min_size
+                minSize=min_face_size
             )
             
             # Prepare face data
@@ -370,7 +381,7 @@ def detect_faces_tool(
                 
                 # Draw rectangle if requested
                 if draw:
-                    cv2.rectangle(img_copy, (x, y), (x+w, y+h), color, thickness)
+                    cv2.rectangle(img_copy, (x, y), (x+w, y+h), draw_color, thickness)
             
         elif method.lower() == 'dnn':
             # Paths to the model files
@@ -462,12 +473,12 @@ def detect_faces_tool(
                     
                     # Draw rectangle if requested
                     if draw:
-                        cv2.rectangle(img_copy, (startX, startY), (endX, endY), color, thickness)
+                        cv2.rectangle(img_copy, (startX, startY), (endX, endY), draw_color, thickness)
                         # Draw confidence text
                         text = f"{confidence:.2f}"
                         y_text = startY - 10 if startY - 10 > 10 else startY + 10
                         cv2.putText(img_copy, text, (startX, y_text),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, draw_color, 2)
         
         else:
             raise ValueError(f"Unsupported face detection method: {method}")
@@ -498,7 +509,7 @@ def detect_objects_tool(
     width: int = 416,
     height: int = 416,
     draw: bool = True,
-    color: Tuple[int, int, int] = (0, 255, 0),
+    color: List[int] = [0, 255, 0],
     thickness: int = 2
 ) -> Dict[str, Any]:
     """
@@ -528,6 +539,10 @@ def detect_objects_tool(
         
         # Make a copy for drawing
         img_copy = img.copy()
+
+        if len(color) != 3:
+            raise ValueError("color must contain exactly 3 values in BGR format")
+        draw_color = tuple(int(channel) for channel in color)
         
         # Get image dimensions
         (orig_h, orig_w) = img.shape[:2]
@@ -693,13 +708,13 @@ def detect_objects_tool(
                     y_end = min(orig_h, y + h)
                     
                     # Draw rectangle
-                    cv2.rectangle(img_copy, (x, y), (x_end, y_end), color, thickness)
+                    cv2.rectangle(img_copy, (x, y), (x_end, y_end), draw_color, thickness)
                     
                     # Add label
                     text = f"{class_name}: {confidences[idx]:.2f}"
                     y_text = y - 10 if y - 10 > 10 else y + 10
                     cv2.putText(img_copy, text, (x, y_text),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, draw_color, 2)
         
         # Save and display
         result_path = save_and_display(img_copy, image_path, "objects_detected")

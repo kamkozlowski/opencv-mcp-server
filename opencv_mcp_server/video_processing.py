@@ -11,7 +11,7 @@ import numpy as np
 import os
 import logging
 import tempfile
-from typing import Optional, List, Dict, Any, Tuple, Union
+from typing import Optional, List, Dict, Any, Union
 
 # Import utility functions from utils
 from .utils import get_image_info, save_and_display, get_timestamp, get_video_output_folder, open_image_with_system_viewer
@@ -249,7 +249,7 @@ def detect_motion_tool(
     dilate_size: int = 5,
     min_area: int = 500,
     draw: bool = True,
-    color: Tuple[int, int, int] = (0, 255, 0),
+    color: List[int] = [0, 255, 0],
     thickness: int = 2
 ) -> Dict[str, Any]:
     """
@@ -309,6 +309,10 @@ def detect_motion_tool(
         # Copy frames for visualization
         diff_visualization = cv2.cvtColor(dilated, cv2.COLOR_GRAY2BGR)
         frame2_copy = frame2.copy()
+
+        if len(color) != 3:
+            raise ValueError("color must contain exactly 3 values in BGR format")
+        draw_color = tuple(int(channel) for channel in color)
         
         for i, contour in enumerate(contours):
             area = cv2.contourArea(contour)
@@ -329,8 +333,8 @@ def detect_motion_tool(
                 
                 # Draw contour if requested
                 if draw:
-                    cv2.rectangle(frame2_copy, (x, y), (x+w, y+h), color, thickness)
-                    cv2.drawContours(diff_visualization, [contour], -1, color, thickness)
+                    cv2.rectangle(frame2_copy, (x, y), (x+w, y+h), draw_color, thickness)
+                    cv2.drawContours(diff_visualization, [contour], -1, draw_color, thickness)
         
         # Save the results to the same directory as input frames
         # Generate filenames based on input frames
@@ -819,7 +823,7 @@ def detect_video_objects_tool(
     frame_step: int = 1,
     fps: Optional[float] = None,
     show_labels: bool = True,
-    color: Tuple[int, int, int] = (0, 255, 0),
+    color: List[int] = [0, 255, 0],
     thickness: int = 2
 ) -> Dict[str, Any]:
     """
@@ -874,6 +878,10 @@ def detect_video_objects_tool(
         
         if frame_step < 1:
             frame_step = 1
+
+        if len(color) != 3:
+            raise ValueError("color must contain exactly 3 values in BGR format")
+        draw_color = tuple(int(channel) for channel in color)
         
         # Generate output path if not provided
         if output_path is None:
@@ -1072,14 +1080,14 @@ def detect_video_objects_tool(
                     y_end = min(orig_h, y + h)
                     
                     # Draw rectangle
-                    cv2.rectangle(frame_vis, (x, y), (x_end, y_end), color, thickness)
+                    cv2.rectangle(frame_vis, (x, y), (x_end, y_end), draw_color, thickness)
                     
                     # Add label
                     if show_labels:
                         text = f"{class_name}: {confidence:.2f}"
                         y_text = y - 10 if y - 10 > 10 else y + 10
                         cv2.putText(frame_vis, text, (x, y_text),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, draw_color, 2)
             
             # Write frame to output video
             out.write(frame_vis)
@@ -1144,7 +1152,7 @@ def detect_camera_objects_tool(
     height: int = 416,
     fps: int = 30,
     show_labels: bool = True,
-    color: Tuple[int, int, int] = (0, 255, 0),
+    color: List[int] = [0, 255, 0],
     thickness: int = 2
 ) -> Dict[str, Any]:
     """
@@ -1179,6 +1187,10 @@ def detect_camera_objects_tool(
         if output_path is None:
             timestamp = get_timestamp()
             output_path = os.path.join(os.getcwd(), f"camera_detected_{timestamp}.mp4")
+
+        if len(color) != 3:
+            raise ValueError("color must contain exactly 3 values in BGR format")
+        draw_color = tuple(int(channel) for channel in color)
         
         # Create output directory if it doesn't exist
         output_dir = os.path.dirname(output_path)
@@ -1377,14 +1389,14 @@ def detect_camera_objects_tool(
                     y_end = min(orig_h, y + h)
                     
                     # Draw rectangle
-                    cv2.rectangle(frame_vis, (x, y), (x_end, y_end), color, thickness)
+                    cv2.rectangle(frame_vis, (x, y), (x_end, y_end), draw_color, thickness)
                     
                     # Add label
                     if show_labels:
                         text = f"{class_name}: {confidence:.2f}"
                         y_text = y - 10 if y - 10 > 10 else y + 10
                         cv2.putText(frame_vis, text, (x, y_text),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, draw_color, 2)
             
             # Add recording information
             elapsed_time = time.time() - start_time
