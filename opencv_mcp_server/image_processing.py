@@ -328,7 +328,7 @@ def detect_contours_tool(
     method: str = "simple",
     draw: bool = True,
     thickness: int = 1,
-    color: Tuple[int, int, int] = (0, 255, 0),
+    color: List[int] = [0, 255, 0],
     threshold_value: float = 127.0
 ) -> Dict[str, Any]:
     """
@@ -390,6 +390,10 @@ def detect_contours_tool(
         contour_mode = contour_modes[mode.lower()]
         contour_method = contour_methods[method.lower()]
         contours, hierarchy = cv2.findContours(binary, contour_mode, contour_method)
+
+        if len(color) != 3:
+            raise ValueError("color must contain exactly 3 values in BGR format")
+        draw_color = tuple(int(channel) for channel in color)
         
         # Collect contour data
         contour_data = []
@@ -416,7 +420,7 @@ def detect_contours_tool(
         
         # Draw contours if requested
         if draw:
-            cv2.drawContours(img_copy, contours, -1, color, thickness)
+            cv2.drawContours(img_copy, contours, -1, draw_color, thickness)
         
         # Save result image
         result_path = save_and_display(img_copy, image_path, f"contours_{mode}_{method}")
